@@ -233,6 +233,9 @@
             const [isOnline, setIsOnline] = React.useState(navigator.onLine);
             const chatRef = React.useRef(null);
 
+            // Base URL for API endpoints using current host and port
+            const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
+
             React.useEffect(() => {
                 const startTime = Date.now();
                 const timer = setInterval(() => {
@@ -306,8 +309,8 @@
 
             const fetchMessages = async () => {
                 try {
-                    console.log('Envoi de la requête GET http://localhost:3000/api/messages');
-                    const response = await fetch('http://localhost:3000/api/messages');
+                    console.log(`Envoi de la requête GET ${API_BASE_URL}/messages`);
+                    const response = await fetch(`${API_BASE_URL}/messages`);
                     if (!response.ok) {
                         const errorText = await response.text();
                         throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
@@ -334,7 +337,7 @@
                 setIsLoading(true);
                 setError('');
                 try {
-                    const endpoint = type === 'students' ? 'http://localhost:3000/api/messages-etu' : 'http://localhost:3000/api/messages-ens';
+                    const endpoint = type === 'students' ? `${API_BASE_URL}/messages-etu` : `${API_BASE_URL}/messages-ens`;
                     console.log(`Envoi du message à ${endpoint}:`, { content: message });
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -361,7 +364,7 @@
                 setIsLoading(true);
                 setError('');
                 try {
-                    const endpoint = `http://localhost:3000/api/messages/${type}/${index}`;
+                    const endpoint = `${API_BASE_URL}/messages/${type}/${index}`;
                     console.log(`Suppression du message à ${endpoint}`);
                     const response = await fetch(endpoint, {
                         method: 'DELETE',
@@ -430,7 +433,7 @@
                     <header className="bg-blue-800 text-white p-5 flex justify-between items-center">
                         <div className="flex items-center">
                             <button
-                                className="gradient-button text-white px-4 py-2 rounded-lg hover-effect focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="բ-button text-white px-4 py-2 rounded-lg hover-effect focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 onClick={() => window.location.href = 'dashboard.html'}
                                 onMouseDown={handleClick}
                                 aria-label="Retour au tableau de bord"
