@@ -1,0 +1,79 @@
+[
+  {
+    "id": 1,
+    "teacher": "Arthur",
+    "group": "FC Barcelone",
+    "room": "Salle 202",
+    "day": "Jeudi",
+    "time": "08:00",
+    "duration": "2",
+    "type": "Préférence",
+    "subject": "PCT"
+  },
+  {
+    "id": 2,
+    "teacher": "Arthur",
+    "group": "FC Barcelone",
+    "room": "Salle 203",
+    "day": "Lundi",
+    "time": "10:00",
+    "duration": "2",
+    "type": "Indisponible",
+    "subject": "PCT"
+  },
+  {
+    "id": 3,
+    "teacher": "Melo",
+    "group": "Manchester City",
+    "room": "Salle 203",
+    "day": "Mardi",
+    "time": "15:00",
+    "duration": "2",
+    "type": "Préférence",
+    "subject": "Chinois"
+  },
+  {
+    "id": 4,
+    "teacher": "Yamal",
+    "group": "Brighton",
+    "room": "Salle 204",
+    "day": "Mercredi",
+    "time": "08:00",
+    "duration": "2",
+    "type": "Préférence",
+    "subject": "Sport"
+  },
+  {
+    "id": 5,
+    "teacher": "Rodri",
+    "group": "Manchester City",
+    "room": "Salle 202",
+    "day": "Vendredi",
+    "time": "10:00",
+    "duration": "2",
+    "type": "Indisponible",
+    "subject": "Physique"
+  },
+  {
+    "id": 6,
+    "teacher": "Pep",
+    "group": "Manchester City",
+    "room": "Salle 204",
+    "day": "Mardi",
+    "time": "13:00",
+    "duration": "2",
+    "type": "Indisponible",
+    "subject": "Chimie"
+  },
+  {
+    "id": 7,
+    "teacher": "Menes",
+    "group": "Manchester City",
+    "room": "Salle 203",
+    "day": "Lundi",
+    "time": "08:00",
+    "duration": "2",
+    "type": "Indisponible",
+    "subject": "Espagnol"
+  }
+]

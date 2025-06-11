@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "email": "admin@fareno.university",
+    "password": "Admin123!"
+  },
+  {
+    "id": 2,
+    "email": "farenogif@gmail.com",
+    "password": "fareno12"
+  },
+  {
+    "id": 3,
+    "email": "richard@gmail.com",
+    "password": "#Richard123",
+    "lastUpdated": "2025-06-11T19:13:04.100Z"
+  }
+]

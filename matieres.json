@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "PCT",
+    "hourlyVolume": "40"
+  },
+  {
+    "id": 2,
+    "name": "Chinois",
+    "hourlyVolume": "40"
+  },
+  {
+    "id": 3,
+    "name": "Chimie",
+    "hourlyVolume": "40"
+  },
+  {
+    "id": 4,
+    "name": "Sport",
+    "hourlyVolume": "40"
+  },
+  {
+    "id": 5,
+    "name": "Physique",
+    "hourlyVolume": "40"
+  },
+  {
+    "id": 6,
+    "name": "Espagnol",
+    "hourlyVolume": "40"
+  }
+]

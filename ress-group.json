@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "FC Barcelone",
+    "studentCount": 18,
+    "subjects": "PCT",
+    "lastUpdated": "2025-06-11T09:13:10.878Z"
+  },
+  {
+    "id": 2,
+    "name": "Manchester City",
+    "studentCount": 23,
+    "subjects": "Mathématiques",
+    "lastUpdated": "2025-06-11T19:20:00.626Z"
+  },
+  {
+    "id": 3,
+    "name": "Brighton",
+    "studentCount": 15,
+    "subjects": "Mathématiques",
+    "lastUpdated": "2025-06-11T08:56:17.842Z"
+  }
+]

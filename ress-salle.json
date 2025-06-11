@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Salle 202",
+    "capacity": 30,
+    "equipment": "Wifi, Television, Clim",
+    "lastUpdated": "2025-06-11T08:56:57.395Z"
+  },
+  {
+    "id": 2,
+    "name": "Salle 203",
+    "capacity": 50,
+    "equipment": "Wifi, Television, projecteur",
+    "lastUpdated": "2025-06-10T14:16:08.163Z"
+  },
+  {
+    "id": 3,
+    "name": "Salle 204",
+    "capacity": 40,
+    "equipment": "Wifi, Television",
+    "lastUpdated": "2025-06-10T14:16:27.792Z"
+  }
+]
