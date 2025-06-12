@@ -226,14 +226,18 @@
 
         function ExportationPage() {
             const [timetables, setTimetables] = React.useState({});
+            const [teacherTimetables, setTeacherTimetables] = React.useState({});
             const [groups, setGroups] = React.useState([]);
+            const [teachers, setTeachers] = React.useState([]);
             const [selectedGroup, setSelectedGroup] = React.useState('');
+            const [selectedTeacher, setSelectedTeacher] = React.useState('');
             const [selectedDate, setSelectedDate] = React.useState('');
             const [history, setHistory] = React.useState([]);
             const [timeSpent, setTimeSpent] = React.useState(0);
             const [theme, setTheme] = React.useState('light');
             const [error, setError] = React.useState(null);
             const [isLoading, setIsLoading] = React.useState(false);
+            const [viewMode, setViewMode] = React.useState('group'); // 'group' or 'teacher'
 
             React.useEffect(() => {
                 const savedTheme = localStorage.getItem('theme') || 'light';
@@ -260,15 +264,19 @@
             const fetchData = async () => {
                 try {
                     setIsLoading(true);
-                    const [groupRes, historyRes] = await Promise.all([
+                    const [groupRes, teacherRes, historyRes] = await Promise.all([
                         fetch('/api/resources/groups'),
+                        fetch('/api/resources/teachers'),
                         fetch('/api/history')
                     ]);
                     if (!groupRes.ok) throw new Error('Échec du chargement des groupes');
+                    if (!teacherRes.ok) throw new Error('Échec du chargement des enseignants');
                     if (!historyRes.ok) throw new Error('Échec du chargement de l\'historique');
                     const groupsData = await groupRes.json();
+                    const teachersData = await teacherRes.json();
                     const historyData = await historyRes.json();
                     setGroups(groupsData);
+                    setTeachers(teachersData);
                     setHistory(historyData);
                     setIsLoading(false);
                 } catch (err) {
@@ -279,8 +287,8 @@
             };
 
             const fetchTimetable = async () => {
-                if (!selectedGroup || !selectedDate) {
-                    setError('Veuillez sélectionner un groupe et une date.');
+                if (!selectedDate) {
+                    setError('Veuillez sélectionner une date.');
                     return;
                 }
                 try {
@@ -294,10 +302,15 @@
                     if (!res.ok) throw new Error('Échec de la génération de l\'emploi du temps');
                     const data = await res.json();
                     const groupedTimetables = {};
-                    data.forEach(item => {
+                    data.groups.forEach(item => {
                         groupedTimetables[item.group] = item.timetable;
                     });
+                    const teacherTimetablesData = {};
+                    data.teachers.forEach(item => {
+                        teacherTimetablesData[item.teacher] = item.courses;
+                    });
                     setTimetables(groupedTimetables);
+                    setTeacherTimetables(teacherTimetablesData);
                     setIsLoading(false);
                 } catch (err) {
                     console.error('Erreur lors de la génération:', err);
@@ -323,7 +336,7 @@
                         })
                     });
                     if (!res.ok) throw new Error('Échec de l\'exportation');
-                    await fetchData(); // Refresh history
+                    await fetchData();
                     setIsLoading(false);
                     alert('Emploi du temps exporté avec succès.');
                 } catch (err) {
@@ -440,6 +453,24 @@
                 link.click();
             };
 
+            const exportTeacherToCSV = () => {
+                if (!selectedTeacher || !teacherTimetables[selectedTeacher]?.length) {
+                    setError('Veuillez sélectionner un enseignant et générer un emploi du temps.');
+                    return;
+                }
+                const data = teacherTimetables[selectedTeacher].map(course => ({
+                    Jour: course.day.charAt(0).toUpperCase() + course.day.slice(1),
+                    Heure: course.time,
+                    Matière: course.subject,
+                    Groupe: course.group,
+                    Salle: course.room
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Emploi du Temps Enseignant');
+                XLSX.writeFile(wb, `emploi_du_temps_enseignant_${selectedTeacher}_${selectedDate}.csv`);
+            };
+
             const toggleTheme = () => {
                 const newTheme = theme === 'light' ? 'dark' : 'light';
                 setTheme(newTheme);
@@ -447,7 +478,15 @@
                 document.documentElement.classList.toggle('dark', newTheme === 'dark');
             };
 
+            const switchViewMode = (mode) => {
+                setViewMode(mode);
+                setSelectedGroup('');
+                setSelectedTeacher('');
+                setError(null);
+            };
+
             const dayHeaders = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+            const teacherHeaders = ['Jour', 'Heure', 'Matière', 'Groupe', 'Salle'];
 
             return (
                 <div className="min-h-screen">
@@ -478,16 +517,43 @@
                             </div>
                         )}
                         <div className="flex flex-wrap gap-4 mb-8">
-                            <select
-                                className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white"
-                                value={selectedGroup}
-                                onChange={(e) => setSelectedGroup(e.target.value)}
-                            >
-                                <option value="">Sélectionner un groupe</option>
-                                {groups.map(group => (
-                                    <option key={group.id} value={group.name}>{group.name}</option>
-                                ))}
-                            </select>
+                            <div className="flex gap-2">
+                                <button
+                                    className={`gradient-button ${viewMode === 'group' ? 'opacity-100' : 'opacity-50'}`}
+                                    onClick={() => switchViewMode('group')}
+                                >
+                                    Vue Groupe
+                                </button>
+                                <button
+                                    className={`gradient-button ${viewMode === 'teacher' ? 'opacity-100' : 'opacity-50'}`}
+                                    onClick={() => switchViewMode('teacher')}
+                                >
+                                    Vue Enseignant
+                                </button>
+                            </div>
+                            {viewMode === 'group' ? (
+                                <select
+                                    className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white"
+                                    value={selectedGroup}
+                                    onChange={(e) => setSelectedGroup(e.target.value)}
+                                >
+                                    <option value="">Sélectionner un groupe</option>
+                                    {groups.map(group => (
+                                        <option key={group.id} value={group.name}>{group.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <select
+                                    className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white"
+                                    value={selectedTeacher}
+                                    onChange={(e) => setSelectedTeacher(e.target.value)}
+                                >
+                                    <option value="">Sélectionner un enseignant</option>
+                                    {teachers.map(teacher => (
+                                        <option key={teacher.id} value={teacher.name}>{teacher.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <input
                                 type="date"
                                 className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white"
@@ -497,29 +563,38 @@
                             <button className="gradient-button" onClick={fetchTimetable} disabled={isLoading}>
                                 {isLoading ? 'Génération...' : 'Générer'}
                             </button>
-                            <button className="gradient-button" onClick={exportToBackend} disabled={isLoading}>
-                                Enregistrer
-                            </button>
-                            <button className="gradient-button" onClick={exportToPDF} disabled={isLoading}>
-                                Exporter en PDF
-                            </button>
-                            <button className="gradient-button" onClick={exportToCSV} disabled={isLoading}>
-                                Exporter en CSV
-                            </button>
-                            <button className="gradient-button" onClick={exportToICal} disabled={isLoading}>
-                                Exporter en iCal
-                            </button>
+                            {viewMode === 'group' && (
+                                <>
+                                    <button className="gradient-button" onClick={exportToBackend} disabled={isLoading}>
+                                        Enregistrer
+                                    </button>
+                                    <button className="gradient-button" onClick={exportToPDF} disabled={isLoading}>
+                                        Exporter en PDF
+                                    </button>
+                                    <button className="gradient-button" onClick={exportToCSV} disabled={isLoading}>
+                                        Exporter en CSV
+                                    </button>
+                                    <button className="gradient-button" onClick={exportToICal} disabled={isLoading}>
+                                        Exporter en iCal
+                                    </button>
+                                </>
+                            )}
+                            {viewMode === 'teacher' && (
+                                <button className="gradient-button" onClick={exportTeacherToCSV} disabled={isLoading}>
+                                    Exporter en CSV
+                                </button>
+                            )}
                         </div>
                         <div className="timetable-preview fade-in">
                             {isLoading ? (
                                 <div className="card p-4 text-center text-gray-500 dark:text-gray-400">
                                     Chargement...
                                 </div>
-                            ) : groups.length === 0 ? (
+                            ) : groups.length === 0 && teachers.length === 0 ? (
                                 <div className="card p-4 text-center text-gray-500 dark:text-gray-400">
-                                    Aucun groupe disponible.
+                                    Aucun groupe ou enseignant disponible.
                                 </div>
-                            ) : (
+                            ) : viewMode === 'group' ? (
                                 selectedGroup && timetables[selectedGroup]?.length ? (
                                     <div className="card mb-6">
                                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -567,6 +642,38 @@
                                         Sélectionnez un groupe et une date, puis générez l'emploi du temps.
                                     </div>
                                 )
+                            ) : selectedTeacher && teacherTimetables[selectedTeacher]?.length ? (
+                                <div className="card mb-6">
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                                        Emploi du Temps - {selectedTeacher} ({selectedDate})
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    {teacherHeaders.map((header, index) => (
+                                                        <th key={index}>{header}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {teacherTimetables[selectedTeacher].map((course, index) => (
+                                                    <tr key={index}>
+                                                        <td>{course.day.charAt(0).toUpperCase() + course.day.slice(1)}</td>
+                                                        <td>{course.time}</td>
+                                                        <td>{course.subject}</td>
+                                                        <td>{course.group}</td>
+                                                        <td>{course.room}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="card p-4 text-center text-gray-500 dark:text-gray-400">
+                                    Sélectionnez un enseignant et une date, puis générez l'emploi du temps.
+                                </div>
                             )}
                         </div>
                     </main>
