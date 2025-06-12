@@ -57,7 +57,7 @@ const fileMap = {
 const emploitDir = path.join(__dirname, 'emploit');
 fs.mkdir(emploitDir, { recursive: true }).catch(err => console.error('Erreur lors de la création du dossier emploit:', err));
 
-const UPLOADS_DIR = path.join(__dirname, 'Uploads'); // Define constant at top level
+const UPLOADS_DIR = path.join(__dirname, 'Uploads');
 fs.mkdir(UPLOADS_DIR, { recursive: true }).catch(err => console.error('Erreur lors de la création du dossier uploads:', err.message));
 
 const storage = multer.diskStorage({
@@ -82,15 +82,15 @@ app.post('/api/verify-code', async (req, res) => {
 
     try {
         const codeData = await readJson('code.json');
-        const submittedCode = parseInt(code); // Convert to number for comparison
+        const submittedCode = parseInt(code);
         const isValidCode = codeData.some(item => item.code === submittedCode);
 
         if (isValidCode) {
             console.log('Code vérifié avec succès:', submittedCode);
             return res.status(200).json({ message: 'Code vérifié avec succès' });
         } else {
-            console.warn('Code incorrect soumis:', err.submittedCode);
-            return res.status(400).json({error: 'Code invalide. Veuillez réessayer.' });
+            console.warn('Code incorrect soumis:', submittedCode);
+            return res.status(400).json({ error: 'Code invalide. Veuillez réessayer.' });
         }
     } catch (err) {
         console.error('Erreur lors de la vérification du code:', err.message);
@@ -100,7 +100,7 @@ app.post('/api/verify-code', async (req, res) => {
 
 app.post('/api/reset-password', async (req, res) => {
     console.log('Requête POST /api/reset-password reçue:', req.body);
-    const { phoneNumber, email, code } = req.body;
+    const { phoneNumber, email, password } = req.body;
 
     if (!phoneNumber || !email || !password) {
         console.error('Données manquantes dans la requête');
@@ -108,21 +108,20 @@ app.post('/api/reset-password', async (req, res) => {
     }
 
     try {
-        const admins = await readJson(fileMap.admins);
-        const adminIndex = admins.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+    const admins = await readJson(fileMap.admins);
+    const adminIndex = admins.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
 
-        if (adminIndex === -1) {
-            console.warn(`Échec de la réinitialisation du mot de passe pour ${email}: utilisateur non trouvé`);
-            return res.status(400).json({ error: 'Email non trouvé. Veuillez vérifier votre email.' });
-        }
+    if (adminIndex === -1) {
+        console.warn(`Échec de la réinitialisation du mot de passe pour ${email}: utilisateur non trouvé`);
+        return res.status(400).json({ error: 'Email non trouvé. Veuillez vérifier votre email.' });
+    }
 
-        // Update the password
-        admins[adminIndex].password = password;
-        admins[adminIndex].lastUpdated = new Date().toISOString();
+    admins[adminIndex].password = password;
+    admins[adminIndex].lastUpdated = new Date().toISOString();
 
-        await writeJson(fileMap.admins);
-        console.log(`Mot de passe mis à jour pour ${email}`);
-        return res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
+    await writeJson(fileMap.admins, admins);
+    console.log(`Mot de passe mis à jour pour ${email}`);
+    return res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
 
     } catch (err) {
         console.error('Erreur lors de la réinitialisation du mot de passe:', err.message);
@@ -375,8 +374,8 @@ app.delete('/api/users/:type/:id', async (req, res) => {
             );
             await writeJson(fileMap.groups, newGroups);
         }
-        data = data.filter((_, i) => i !== index);
-        await writeJson(fileMap[type], data);
+        const updatedData = data.filter((_, i) => i !== index);
+        await writeJson(fileMap[type], updatedData);
         res.json({ message: 'Utilisateur supprimé' });
     } catch (err) {
         console.error(`Erreur lors de la suppression dans ${fileMap[type]}:`, err.message);
@@ -549,9 +548,9 @@ app.delete('/api/documents/:id', async (req, res) => {
         if (!document) {
             return res.status(404).json({ error: 'Document non trouvé' });
         }
-        const filePath = path.join(UPLOADS_DIR, document.fileName); // Use UPLOADS_DIR constant
+        const filePath = path.join(UPLOADS_DIR, document.fileName);
         try {
-            await fs.access(filePath); // Check if file exists
+            await fs.access(filePath);
             await fs.unlink(filePath);
             console.log(`Fichier ${filePath} supprimé avec succès`);
         } catch (err) {
@@ -833,11 +832,12 @@ app.get('/api/history', async (req, res) => {
         const historyData = files
             .filter(file => file.endsWith('.json'))
             .map(file => {
-                const match = file.match(/timetable_(\d{4}-\d{2}-\d{2})_(.+)\.json/);
+                const match = file.match(/(timetable|teacher-timetable)_(\d{4}-\d{2}-\d{2})_(.+)\.json/);
                 return {
                     name: file,
-                    date: match ? match[1] : 'Inconnu',
-                    group: match ? match[2] : 'Inconnu'
+                    date: match ? match[2] : 'Inconnu',
+                    type: match && match[1] === 'timetable' ? 'group' : 'teacher',
+                    entity: match ? match[3] : 'Inconnu'
                 };
             });
         res.json(historyData);
@@ -855,6 +855,25 @@ app.get('/api/timetable/:fileName', async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error(`Erreur lors de la lecture du fichier ${fileName} :`, err.message);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.get('/api/teacher-timetable/:teacherName', async (req, res) => {
+    console.log(`Requête GET /api/teacher-timetable/${req.params.teacherName} reçue`);
+    const { teacherName } = req.params;
+    try {
+        const files = await fs.readdir(emploitDir);
+        const teacherFile = files.find(file => 
+            file.startsWith(`teacher-timetable_`) && file.includes(teacherName)
+        );
+        if (!teacherFile) {
+            return res.status(404).json({ error: 'Emploi du temps de l\'enseignant non trouvé' });
+        }
+        const data = await readJson(path.join(emploitDir, teacherFile));
+        res.json(data);
+    } catch (err) {
+        console.error(`Erreur lors de la lecture de l\'emploi du temps de ${teacherName}:`, err.message);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -895,7 +914,10 @@ app.post('/api/generate-timetable', async (req, res) => {
 
         const timeSlots = ['08:00-10:00', '10:00-12:00', '13:00-15:00', '15:00-17:00'];
         const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
-        const result = [];
+        const result = {
+            groups: [],
+            teachers: []
+        };
         const assignments = new Map();
 
         const isSlotAvailable = (teacher, group, room, day, slot) => {
@@ -915,6 +937,17 @@ app.post('/api/generate-timetable', async (req, res) => {
 
         const getRandomElement = (array) => array[Math.floor(Math.random() * array.length)];
 
+        // Initialiser les emplois du temps des enseignants
+        const teacherTimetables = teachers.reduce((acc, teacher) => {
+            acc[teacher.name] = {
+                date,
+                teacher: teacher.name,
+                courses: []
+            };
+            return acc;
+        }, {});
+
+        // Générer les emplois du temps par groupe
         for (const group of groups) {
             const timetable = timeSlots.map(slot => ({
                 time: slot,
@@ -939,16 +972,26 @@ app.post('/api/generate-timetable', async (req, res) => {
                     if (availableTeachers.length && availableRooms.length) {
                         const teacher = getRandomElement(availableTeachers);
                         const room = getRandomElement(availableRooms);
-                        const subject = teacher.subjects || getRandomElement(subjects).name;
+                        const subject = teacher.subjects ? getRandomElement(teacher.subjects) : getRandomElement(subjects).name;
 
                         timetable[slotIndex][day] = `${subject} (${teacher.name}, ${group.name}, ${room.name})`;
                         assignSlot(teacher.name, group.name, room.name, subject, day, slot);
+
+                        // Ajouter le cours à l'emploi du temps de l'enseignant
+                        teacherTimetables[teacher.name].courses.push({
+                            day,
+                            time: slot,
+                            subject,
+                            group: group.name,
+                            room: room.name
+                        });
                     } else {
-                        console.warn(`No available teacher or room for ${group.name} on ${day} ${slot}`);
+                        console.warn(`Aucun enseignant ou salle disponible pour ${group.name} le ${day} à ${slot}`);
                     }
                 }
             }
 
+            // Appliquer les contraintes
             for (const constraint of constraints) {
                 if (constraint.type !== 'Indisponible' || !constraint.teacher) continue;
                 const day = constraint.day.toLowerCase();
@@ -960,12 +1003,24 @@ app.post('/api/generate-timetable', async (req, res) => {
                     timetable[slotIndex][day] = 'Libre';
                     const slotKey = `${day}_${slot}`;
                     assignments.set(slotKey, []);
+
+                    // Supprimer le cours de l'emploi du temps de l'enseignant
+                    teacherTimetables[constraint.teacher].courses = teacherTimetables[constraint.teacher].courses.filter(
+                        course => !(course.day === day && course.time === slot)
+                    );
                 }
             }
 
             const fileName = `timetable_${date}_${group.name}.json`;
             await writeJson(path.join(emploitDir, fileName), timetable);
-            result.push({ date, group: group.name, timetable });
+            result.groups.push({ date, group: group.name, timetable });
+        }
+
+        // Sauvegarder les emplois du temps des enseignants
+        for (const teacherName in teacherTimetables) {
+            const fileName = `teacher-timetable_${date}_${teacherName}.json`;
+            await writeJson(path.join(emploitDir, fileName), teacherTimetables[teacherName]);
+            result.teachers.push(teacherTimetables[teacherName]);
         }
 
         res.json(result);
