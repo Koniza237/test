@@ -1,3 +1,6 @@
+// Note: This project assumes that package.json is located in the root directory of the project,
+// alongside other configuration files like .env and the node_modules folder.
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs').promises;
@@ -6,7 +9,7 @@ const path = require('path');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const PDFDocument = require('pdfkit');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') }); // Explicitly specify .env path in root
 
 const app = express();
 app.use(cors());
@@ -108,21 +111,20 @@ app.post('/api/reset-password', async (req, res) => {
     }
 
     try {
-    const admins = await readJson(fileMap.admins);
-    const adminIndex = admins.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+        const admins = await readJson(fileMap.admins);
+        const adminIndex = admins.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
 
-    if (adminIndex === -1) {
-        console.warn(`Échec de la réinitialisation du mot de passe pour ${email}: utilisateur non trouvé`);
-        return res.status(400).json({ error: 'Email non trouvé. Veuillez vérifier votre email.' });
-    }
+        if (adminIndex === -1) {
+            console.warn(`Échec de la réinitialisation du mot de passe pour ${email}: utilisateur non trouvé`);
+            return res.status(400).json({ error: 'Email non trouvé. Veuillez vérifier votre email.' });
+        }
 
-    admins[adminIndex].password = password;
-    admins[adminIndex].lastUpdated = new Date().toISOString();
+        admins[adminIndex].password = password;
+        admins[adminIndex].lastUpdated = new Date().toISOString();
 
-    await writeJson(fileMap.admins, admins);
-    console.log(`Mot de passe mis à jour pour ${email}`);
-    return res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
-
+        await writeJson(fileMap.admins, admins);
+        console.log(`Mot de passe mis à jour pour ${email}`);
+        return res.status(200).json({ message: 'Mot de passe mis à jour avec succès' });
     } catch (err) {
         console.error('Erreur lors de la réinitialisation du mot de passe:', err.message);
         return res.status(500).json({ error: 'Erreur serveur lors de la réinitialisation du mot de passe' });
